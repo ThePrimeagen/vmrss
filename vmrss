@@ -5,6 +5,7 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
+declare -a arr
 arr=("$1" 0)
 
 while [ ${#arr[@]} -gt 0 ]; do
@@ -15,18 +16,23 @@ while [ ${#arr[@]} -gt 0 ]; do
     pid=${arr[${#arr[@]}-1]}
     unset arr[${#arr[@]}-1]
 
+    [ -d "/proc/$pid" ] || continue
+
+    GREP_OPTS=${GREP_OPTS:-"
+      --color=auto
+      --exclude-dir={.bzr,CVS,.git,.hg,.svn,.idea,.tox}
+      "}
+    mem=$(grep $GREP_OPTS VmRSS /proc/$pid/status \
+      | grep $GREP_OPTS -o '[0-9]\+' \
+      | awk '{print $1/1024 " MB"}')
+
     # name of process
-    name=`ps -p $pid -o comm=`
+    name=$(ps -p $pid -o comm=)
 
-    if [ ! -d "/proc/$pid" ]; then
-        continue
-    fi
-
-    mem=`cat /proc/$pid/status | grep --color=auto --exclude-dir={.bzr,CVS,.git,.hg,.svn,.idea,.tox} VmRSS | grep --color=auto --exclude-dir={.bzr,CVS,.git,.hg,.svn,.idea,.tox} -o '[0-9]\+' | awk '{print $1/1024 " MB"}'`
-    printf "%${space}s$name($pid): $mem\n"
+    printf "%${space}s%s($pid): $mem\n" '' "$name"
 
     # get children
-    children=`pgrep -P $pid`
+    children=$(pgrep -P $pid)
 
     # add children to array
     for child in $children; do
