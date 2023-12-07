@@ -7,6 +7,7 @@ fi
 
 declare -a arr
 arr=("$1" 0)
+total=0
 
 while [ ${#arr[@]} -gt 0 ]; do
 
@@ -24,12 +25,14 @@ while [ ${#arr[@]} -gt 0 ]; do
       "}
     mem=$(grep $GREP_OPTS VmRSS /proc/$pid/status \
       | grep $GREP_OPTS -o '[0-9]\+' \
-      | awk '{print $1/1024 " MB"}')
+      | awk '{print $1/1024}')
+    #Add decimals to total
+    total = $(echo $mem+$total | bc)
 
     # name of process
     name=$(ps -p $pid -o comm=)
 
-    printf "%${space}s%s($pid): $mem\n" '' "$name"
+    printf "%${space}s%s($pid): $mem MB\n" '' "$name"
 
     # get children
     children=$(pgrep -P $pid)
@@ -39,3 +42,4 @@ while [ ${#arr[@]} -gt 0 ]; do
         arr+=("$child" $((space+2)))
     done
 done
+printf "Total: $total MB\n"
