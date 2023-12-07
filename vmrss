@@ -27,7 +27,7 @@ while [ ${#arr[@]} -gt 0 ]; do
       | grep $GREP_OPTS -o '[0-9]\+' \
       | awk '{print $1/1024}')
     #Add decimals to total
-    total = $(echo $mem+$total | bc)
+    total=$(echo $mem+$total | bc)
 
     # name of process
     name=$(ps -p $pid -o comm=)
