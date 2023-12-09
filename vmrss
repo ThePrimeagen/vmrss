@@ -1,9 +1,30 @@
 #!/usr/bin/env bash
 
+function usage() {
+    echo "Usage: $0 [-f] <pid>"
+}
+    
 if [ $# -eq 0 ]; then
-    echo "Usage: $0 <pid>"
+    usage
     exit 1
+else 
+    while [ $# -gt 0 ]; do
+        case $1 in
+        -f|-follow|--follow)
+            VMRSS_MONITOR=1
+            shift
+            ;;
+	-h|-help|--help)
+	    usage
+	    exit 0
+	    ;;
+        *)
+            break
+	    ;;
+        esac
+    done
 fi
+
 
 function print_vmrss() {
     declare -a arr
