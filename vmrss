@@ -5,10 +5,34 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
+function get_cpu() {
+	declare pid="$1"
+	
+	PROCESS_STAT=($(sed -E 's/\([^)]+\)/X/' "/proc/$pid/stat"))
+	PROCESS_UTIME=${PROCESS_STAT[13]}
+	PROCESS_STIME=${PROCESS_STAT[14]}
+	PROCESS_STARTTIME=${PROCESS_STAT[21]}
+	SYSTEM_UPTIME_SEC=$(tr . ' ' </proc/uptime | awk '{print $1}')
+
+	CLK_TCK=$(getconf CLK_TCK)
+
+	PROCESS_UTIME_SEC=$(bc <<< "scale=2; $PROCESS_UTIME / $CLK_TCK")
+	PROCESS_STIME_SEC=$(bc <<< "scale=2; $PROCESS_STIME / $CLK_TCK")
+	PROCESS_STARTTIME_SEC=$(bc <<< "scale=2; $PROCESS_STARTTIME / $CLK_TCK")
+
+	PROCESS_ELAPSED_SEC=$(bc <<< "scale=2; $SYSTEM_UPTIME_SEC - $PROCESS_STARTTIME_SEC")
+
+	PROCESS_USAGE_SEC=$(bc <<< "scale=2; $PROCESS_UTIME_SEC + $PROCESS_STIME_SEC")
+	PROCESS_USAGE=$(bc <<< "scale=2; $PROCESS_USAGE_SEC * 100 / $PROCESS_ELAPSED_SEC")
+
+	echo ${PROCESS_USAGE}
+}
+
 function print_vmrss() {
     declare -a arr
     arr=("$1" 0)
     total=0
+	totalcpu=0
 
     while [ ${#arr[@]} -gt 0 ]; do
 
@@ -33,7 +57,11 @@ function print_vmrss() {
         # name of process
         name=$(ps -p $pid -o comm=)
 
-        printf "%${space}s%s($pid): $mem MB\n" '' "$name"
+		# cpu of process
+		cpu=$(get_cpu $pid)
+        totalcpu=$(echo $cpu+$totalcpu | bc)
+
+        printf "%${space}s%s($pid): $mem MB\t $cpu CPU\n" '' "$name"
 
         # get children
         children=$(pgrep -P $pid)
@@ -44,6 +72,7 @@ function print_vmrss() {
         done
     done
     printf "Total: $total MB\n"
+	printf "Total Cpu: $totalcpu %%\n"
 }
 
 # check VMRSS_MONITOR = 1
